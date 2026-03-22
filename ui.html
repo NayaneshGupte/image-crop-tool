@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Hero Page Generator</title>
+  <style>
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --border:   #2e3247;
+      --text:     #e4e6f0;
+      --muted:    #7b80a0;
+      --accent:   #6c63ff;
+      --accent2:  #a78bfa;
+      --green:    #22c55e;
+      --red:      #ef4444;
+      --radius:   12px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 1.2rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    header h1 { font-size: 1.15rem; font-weight: 600; }
+    header span { font-size: 1.4rem; }
+    .badge {
+      margin-left: auto;
+      font-size: 0.7rem;
+      background: rgba(108,99,255,0.15);
+      color: var(--accent2);
+      border: 1px solid rgba(108,99,255,0.3);
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-weight: 500;
+    }
+
+    /* ── Main layout ── */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    /* ── File browser sidebar ── */
+    aside {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar-header {
+      padding: 1rem 1.25rem 0.75rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .file-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem;
+    }
+    .file-list::-webkit-scrollbar { width: 4px; }
+    .file-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.55rem 0.75rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .15s;
+      position: relative;
+    }
+    .file-item:hover { background: rgba(255,255,255,0.05); }
+    .file-item.selected-as-screenshot { background: rgba(108,99,255,0.12); }
+    .file-item.selected-as-photo      { background: rgba(34,197,94,0.12); }
+    .file-thumb {
+      width: 38px; height: 38px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .file-info { min-width: 0; }
+    .file-name {
+      font-size: 0.78rem;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 155px;
+    }
+    .file-size { font-size: 0.67rem; color: var(--muted); margin-top: 1px; }
+    .file-tag {
+      margin-left: auto;
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .tag-ss    { background: rgba(108,99,255,0.2); color: var(--accent2); }
+    .tag-photo { background: rgba(34,197,94,0.2);  color: var(--green); }
+
+    /* ── Right panel ── */
+    .panel {
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 1.75rem 2rem;
+      gap: 1.5rem;
+    }
+    .panel::-webkit-scrollbar { width: 4px; }
+    .panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── Assignment slots ── */
+    .slots {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+    .slot {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      min-height: 180px;
+      transition: border-color .2s, background .2s;
+      cursor: default;
+      position: relative;
+    }
+    .slot.active-screenshot {
+      border-color: var(--accent);
+      background: rgba(108,99,255,0.06);
+    }
+    .slot.active-photo {
+      border-color: var(--green);
+      background: rgba(34,197,94,0.06);
+    }
+    .slot-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      align-self: flex-start;
+    }
+    .slot.active-screenshot .slot-label { color: var(--accent2); }
+    .slot.active-photo      .slot-label { color: var(--green); }
+    .slot-preview {
+      width: 100%; max-height: 140px;
+      object-fit: cover;
+      border-radius: 8px;
+      display: none;
+    }
+    .slot-preview.visible { display: block; }
+    .slot-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--muted);
+    }
+    .slot-placeholder svg { opacity: 0.4; }
+    .slot-placeholder p { font-size: 0.78rem; }
+    .slot-placeholder small { font-size: 0.68rem; }
+    .slot-clear {
+      position: absolute;
+      top: 0.6rem; right: 0.6rem;
+      background: rgba(239,68,68,0.15);
+      color: var(--red);
+      border: none;
+      border-radius: 6px;
+      width: 24px; height: 24px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s;
+    }
+    .slot-clear:hover { background: rgba(239,68,68,0.3); }
+    .slot-clear.visible { display: flex; }
+
+    /* ── Controls bar ── */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .btn-generate {
+      padding: 0.72rem 2rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: filter .18s, transform .12s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .btn-generate:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
+    .btn-generate:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+    .method-info {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    .method-info strong { color: var(--text); }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    .spinner.visible { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Status message ── */
+    .status {
+      padding: 0.65rem 1rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      display: none;
+    }
+    .status.visible { display: block; }
+    .status.success { background: rgba(34,197,94,0.1);  color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+    .status.error   { background: rgba(239,68,68,0.1);  color: var(--red);   border: 1px solid rgba(239,68,68,0.25); }
+    .status.info    { background: rgba(108,99,255,0.1); color: var(--accent2); border: 1px solid rgba(108,99,255,0.25); }
+
+    /* ── Output section ── */
+    .output-section { display: none; }
+    .output-section.visible { display: block; }
+    .output-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .output-header h2 { font-size: 0.9rem; font-weight: 600; }
+    .output-actions { display: flex; gap: 0.6rem; margin-left: auto; }
+    .btn-sm {
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: filter .15s;
+    }
+    .btn-sm:hover { filter: brightness(1.15); }
+    .btn-open    { background: var(--accent); color: #fff; border: none; }
+    .btn-dl      { background: transparent; color: var(--accent2); border: 1px solid rgba(108,99,255,0.4); }
+    .color-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .chip {
+      display: flex; align-items: center; gap: 0.35rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; padding: 0.25rem 0.6rem;
+      font-size: 0.68rem; color: var(--muted);
+    }
+    .chip-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .preview-frame {
+      width: 100%;
+      height: 480px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    /* ── Instruction tip ── */
+    .tip {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+      padding: 0.75rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span>🎨</span>
+  <h1>Hero Page Generator</h1>
+  <span class="badge">Local · No LLM · No API</span>
+</header>
+
+<main>
+  <!-- ── File browser sidebar ── -->
+  <aside>
+    <div class="sidebar-header">📁 Project Files</div>
+    <div class="file-list" id="fileList">
+      <p style="padding:1rem;font-size:.78rem;color:var(--muted)">Loading…</p>
+    </div>
+  </aside>
+
+  <!-- ── Right panel ── -->
+  <div class="panel">
+
+    <div class="tip">
+      💡 <span>Click a file on the left, then click <strong>Set as Screenshot</strong> or <strong>Set as Photo</strong> below to assign it.</span>
+    </div>
+
+    <!-- Assignment slots -->
+    <div class="slots">
+      <!-- Screenshot slot -->
+      <div class="slot" id="slotScreenshot">
+        <div class="slot-label">1 · Reference Screenshot</div>
+        <button class="slot-clear" id="clearScreenshot" title="Remove">✕</button>
+        <img class="slot-preview" id="previewScreenshot" alt="Screenshot preview"/>
+        <div class="slot-placeholder" id="phScreenshot">
+          <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          <p>No screenshot selected</p>
+          <small>Select from file browser →</small>
+        </div>
+      </div>
+
+      <!-- Photo slot -->
+      <div class="slot" id="slotPhoto">
+        <div class="slot-label">2 · Person Photo</div>
+        <button class="slot-clear" id="clearPhoto" title="Remove">✕</button>
+        <img class="slot-preview" id="previewPhoto" alt="Photo preview"/>
+        <div class="slot-placeholder" id="phPhoto">
+          <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          <p>No photo selected</p>
+          <small>Select from file browser →</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- File action buttons (appear when a file is clicked in the sidebar) -->
+    <div id="assignBar" style="display:none;gap:.75rem;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:.8rem;color:var(--muted)">Assign <strong id="assignFileName" style="color:var(--text)"></strong> as:</span>
+      <button class="btn-sm btn-open" onclick="assign('screenshot')" style="background:var(--accent)">📸 Set as Screenshot</button>
+      <button class="btn-sm btn-open" onclick="assign('photo')"      style="background:#16a34a">🧑 Set as Photo</button>
+      <button class="btn-sm btn-dl"   onclick="clearSelection()">Cancel</button>
+    </div>
+
+    <!-- Generate button -->
+    <div class="controls">
+      <button class="btn-generate" id="btnGenerate" disabled onclick="generate()">
+        <div class="spinner" id="spinner"></div>
+        <span id="btnLabel">✨ Generate Page</span>
+      </button>
+      <div class="method-info" id="methodInfo"></div>
+    </div>
+
+    <!-- Status -->
+    <div class="status" id="status"></div>
+
+    <!-- Output -->
+    <div class="output-section" id="outputSection">
+      <div class="output-header">
+        <h2>✅ Output</h2>
+        <div class="output-actions">
+          <a class="btn-sm btn-open" id="btnOpen" href="#" target="_blank">↗ Open in new tab</a>
+          <a class="btn-sm btn-dl"   id="btnDl"   href="#" download="index.html">⬇ HTML</a>
+          <a class="btn-sm btn-dl"   id="btnImg"  href="#" target="_blank" style="display:none">🖼 Image</a>
+        </div>
+      </div>
+      <div class="color-chips" id="colorChips"></div>
+      <iframe class="preview-frame" id="previewFrame"></iframe>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let selectedFile   = null;   // currently clicked in sidebar
+  let screenshotFile = null;
+  let photoFile      = null;
+
+  // ── Load file list ─────────────────────────────────────────────────────────
+  async function loadFiles() {
+    const res   = await fetch('/api/files');
+    const files = await res.json();
+    const list  = document.getElementById('fileList');
+
+    if (!files.length) {
+      list.innerHTML = '<p style="padding:1rem;font-size:.78rem;color:var(--muted)">No images found in project folder.</p>';
+      return;
+    }
+
+    list.innerHTML = files.map(f => `
+      <div class="file-item" id="fi-${CSS.escape(f.name)}" onclick="selectFile('${f.name}')">
+        <img class="file-thumb" src="/api/preview/${encodeURIComponent(f.name)}" alt="${f.name}" onerror="this.style.display='none'"/>
+        <div class="file-info">
+          <div class="file-name" title="${f.name}">${f.name}</div>
+          <div class="file-size">${formatSize(f.size)}</div>
+        </div>
+        <span class="file-tag" id="tag-${CSS.escape(f.name)}"></span>
+      </div>
+    `).join('');
+  }
+
+  function formatSize(bytes) {
+    if (bytes > 1024*1024) return (bytes/1024/1024).toFixed(1) + ' MB';
+    return (bytes/1024).toFixed(0) + ' KB';
+  }
+
+  // ── Select a file in the sidebar ───────────────────────────────────────────
+  function selectFile(name) {
+    // Deselect previous
+    if (selectedFile) {
+      const prev = document.getElementById(`fi-${CSS.escape(selectedFile)}`);
+      if (prev) prev.style.outline = '';
+    }
+    selectedFile = name;
+    const el = document.getElementById(`fi-${CSS.escape(name)}`);
+    if (el) el.style.outline = '2px solid var(--accent)';
+
+    document.getElementById('assignFileName').textContent = name;
+    const bar = document.getElementById('assignBar');
+    bar.style.display = 'flex';
+  }
+
+  function clearSelection() {
+    if (selectedFile) {
+      const el = document.getElementById(`fi-${CSS.escape(selectedFile)}`);
+      if (el) el.style.outline = '';
+    }
+    selectedFile = null;
+    document.getElementById('assignBar').style.display = 'none';
+  }
+
+  // ── Assign to slot ─────────────────────────────────────────────────────────
+  function assign(role) {
+    if (!selectedFile) return;
+
+    if (role === 'screenshot') {
+      // Clear previous tag
+      if (screenshotFile) {
+        const t = document.getElementById(`tag-${CSS.escape(screenshotFile)}`);
+        if (t) { t.textContent = ''; t.className = 'file-tag'; }
+        document.getElementById('fi-' + CSS.escape(screenshotFile))?.classList.remove('selected-as-screenshot');
+      }
+      screenshotFile = selectedFile;
+      setSlot('screenshot', selectedFile);
+    } else {
+      if (photoFile) {
+        const t = document.getElementById(`tag-${CSS.escape(photoFile)}`);
+        if (t) { t.textContent = ''; t.className = 'file-tag'; }
+        document.getElementById('fi-' + CSS.escape(photoFile))?.classList.remove('selected-as-photo');
+      }
+      photoFile = selectedFile;
+      setSlot('photo', selectedFile);
+    }
+
+    // Update sidebar tag
+    const tag = document.getElementById(`tag-${CSS.escape(selectedFile)}`);
+    if (role === 'screenshot') {
+      tag.textContent = 'SS';
+      tag.className = 'file-tag tag-ss';
+      document.getElementById(`fi-${CSS.escape(selectedFile)}`).classList.add('selected-as-screenshot');
+    } else {
+      tag.textContent = 'PH';
+      tag.className = 'file-tag tag-photo';
+      document.getElementById(`fi-${CSS.escape(selectedFile)}`).classList.add('selected-as-photo');
+    }
+
+    clearSelection();
+    updateGenerateButton();
+  }
+
+  function setSlot(role, filename) {
+    const isScreenshot = role === 'screenshot';
+    const slot    = document.getElementById(isScreenshot ? 'slotScreenshot' : 'slotPhoto');
+    const preview = document.getElementById(isScreenshot ? 'previewScreenshot' : 'previewPhoto');
+    const ph      = document.getElementById(isScreenshot ? 'phScreenshot' : 'phPhoto');
+    const clear   = document.getElementById(isScreenshot ? 'clearScreenshot' : 'clearPhoto');
+
+    preview.src = `/api/preview/${encodeURIComponent(filename)}`;
+    preview.classList.add('visible');
+    ph.style.display = 'none';
+    clear.classList.add('visible');
+    slot.classList.add(isScreenshot ? 'active-screenshot' : 'active-photo');
+  }
+
+  function clearSlot(role) {
+    const isScreenshot = role === 'screenshot';
+    const slot    = document.getElementById(isScreenshot ? 'slotScreenshot' : 'slotPhoto');
+    const preview = document.getElementById(isScreenshot ? 'previewScreenshot' : 'previewPhoto');
+    const ph      = document.getElementById(isScreenshot ? 'phScreenshot' : 'phPhoto');
+    const clear   = document.getElementById(isScreenshot ? 'clearScreenshot' : 'clearPhoto');
+
+    const fname = isScreenshot ? screenshotFile : photoFile;
+    if (fname) {
+      const tag = document.getElementById(`tag-${CSS.escape(fname)}`);
+      if (tag) { tag.textContent=''; tag.className='file-tag'; }
+      document.getElementById(`fi-${CSS.escape(fname)}`)?.classList.remove(
+        isScreenshot ? 'selected-as-screenshot' : 'selected-as-photo'
+      );
+    }
+
+    if (isScreenshot) screenshotFile = null; else photoFile = null;
+    preview.src = '';
+    preview.classList.remove('visible');
+    ph.style.display = '';
+    clear.classList.remove('visible');
+    slot.classList.remove(isScreenshot ? 'active-screenshot' : 'active-photo');
+    updateGenerateButton();
+  }
+
+  document.getElementById('clearScreenshot').addEventListener('click', (e) => { e.stopPropagation(); clearSlot('screenshot'); });
+  document.getElementById('clearPhoto').addEventListener('click',      (e) => { e.stopPropagation(); clearSlot('photo'); });
+
+  function updateGenerateButton() {
+    const btn = document.getElementById('btnGenerate');
+    btn.disabled = !(screenshotFile && photoFile);
+  }
+
+  // ── Generate ───────────────────────────────────────────────────────────────
+  async function generate() {
+    if (!screenshotFile || !photoFile) return;
+
+    const btn     = document.getElementById('btnGenerate');
+    const spinner = document.getElementById('spinner');
+    const label   = document.getElementById('btnLabel');
+    const status  = document.getElementById('status');
+
+    btn.disabled    = true;
+    spinner.classList.add('visible');
+    label.textContent = 'Generating…';
+    status.className  = 'status visible info';
+    status.textContent = '⚙️  Extracting colours and blending photo… this takes a few seconds.';
+    document.getElementById('outputSection').classList.remove('visible');
+
+    try {
+      const res  = await fetch('/api/generate', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ screenshot: screenshotFile, photo: photoFile }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Generation failed');
+
+      // Show method used
+      const methodEl = document.getElementById('methodInfo');
+      if (data.method === 'rembg') {
+        methodEl.innerHTML = 'Used <strong>rembg</strong> — background removed ✨';
+      } else {
+        methodEl.innerHTML = 'Used <strong>CSS mask</strong> — install rembg for better results';
+      }
+
+      // Color chips
+      const chips = document.getElementById('colorChips');
+      const c = data.colors;
+      chips.innerHTML = [
+        ['Gradient top',  c.gradient_top],
+        ['Gradient mid',  c.gradient_mid],
+        ['Gradient right',c.gradient_right],
+        ['Nav',           c.nav],
+        ['Accent',        c.accent],
+      ].map(([label, hex]) => `
+        <div class="chip">
+          <div class="chip-dot" style="background:${hex}"></div>
+          ${label}: ${hex}
+        </div>
+      `).join('');
+
+      // Preview + links
+      const outputUrl = '/' + data.html_file;
+      document.getElementById('previewFrame').src = outputUrl;
+      document.getElementById('btnOpen').href = outputUrl;
+      document.getElementById('btnDl').href   = outputUrl;
+
+      // Image link
+      const imgLink = document.getElementById('btnImg');
+      if (data.image_file) {
+        imgLink.href = '/' + data.image_file;
+        imgLink.download = data.image_file.split('/').pop();
+        imgLink.style.display = 'inline-flex';
+        imgLink.title = data.method === 'rembg'
+          ? 'Transparent PNG (background removed)'
+          : 'Original photo copy used in this run';
+      } else {
+        imgLink.style.display = 'none';
+      }
+
+      document.getElementById('outputSection').classList.add('visible');
+
+      status.className   = 'status visible success';
+      status.textContent = `✅  Saved to ${data.html_file}  (also archived as ${data.archive})`;
+
+    } catch (err) {
+      status.className   = 'status visible error';
+      status.textContent = '❌  ' + err.message;
+    } finally {
+      btn.disabled    = false;
+      spinner.classList.remove('visible');
+      label.textContent = '✨ Generate Page';
+      updateGenerateButton();
+    }
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  loadFiles();
+</script>
+</body>
+</html>

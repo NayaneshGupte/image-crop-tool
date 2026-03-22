@@ -1,0 +1,11 @@
+# Core — required
+flask>=3.0.0
+pillow>=10.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+colorthief>=0.2.1
+
+# Optional — recommended for clean background removal (local AI, no API)
+# Uncomment to install:
+# rembg>=2.0.50
+# onnxruntime>=1.16.0
